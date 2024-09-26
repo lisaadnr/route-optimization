@@ -38,7 +38,7 @@
 
     <!-- MapView from OSMDroid -->
     <org.osmdroid.views.MapView
-        android:id="@+id/map"
+        android:id="@+id/mapView"
         android:layout_width="0dp"
         android:layout_height="300dp"
         android:layout_marginTop="16dp"
@@ -57,7 +57,7 @@
         android:padding="8dp"
         android:src="@drawable/map"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/map" />
+        app:layout_constraintTop_toTopOf="@id/mapView" />
 
     <LinearLayout
         android:id="@+id/linearLayout"
@@ -69,7 +69,7 @@
         android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/map">
+        app:layout_constraintTop_toBottomOf="@id/mapView">
 
         <ImageView
             android:id="@+id/editIcon"
