@@ -7,8 +7,13 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.CheckBox
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,37 +30,42 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
     private lateinit var map: MapView
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private lateinit var mapIcon: ImageView
+    private lateinit var autoCompleteTextView: AutoCompleteTextView
+    private lateinit var locationListLayout: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        locationListLayout = findViewById(R.id.linearLayout)
+        binding.btnOptimizeRoute.isEnabled = false
 
-        // Reference to AutoCompleteTextView from the layout
-        val autoCompleteTextView = findViewById<AutoCompleteTextView>(R.id.search_autocomplete)
+        autoCompleteTextView = findViewById(R.id.search_autocomplete)
 
-        // Adapter to set data into AutoCompleteTextView (contoh pake array disini)
-//        val adapter = ArrayAdapter(
-//            this,
-//            android.R.layout.simple_dropdown_item_1line, // layout for each item in suggestions
-//            addresses
-//        )
+        // TextWatcher input pengguna
+        autoCompleteTextView.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
-        // Set adapter to AutoCompleteTextView
-//        autoCompleteTextView.setAdapter(adapter)
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (!s.isNullOrEmpty()) {
+                    searchLocationSuggestions(s.toString())
+                }
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
         // Optional: Set how many characters needed before suggestions appear
         autoCompleteTextView.threshold = 1  // Suggest after 1 character is typed
 
-        // konfigurasi map
+        // Konfigurasi Map
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
 
         mapIcon = binding.mapIcon
@@ -76,8 +86,79 @@ class MainActivity : AppCompatActivity() {
 
         // *temp button
         binding.btnOptimizeRoute.setOnClickListener {
-            searchLocation()
+           // searchLocationSuggestions(String.toString())
         }
+
+        autoCompleteTextView.setOnItemClickListener { parent, _, position, _ ->
+            val selectedLocation = parent.getItemAtPosition(position) as String
+
+            val geoCoder = Geocoder(this)
+            var addressList: List<Address>? = null
+            try {
+                addressList = geoCoder.getFromLocationName(selectedLocation, 1)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            if (addressList != null && addressList.isNotEmpty()) {
+                val address = addressList[0]
+                val addressLoc = GeoPoint(address.latitude, address.longitude)
+
+                // Tambahkan marker di peta
+                val marker = Marker(map)
+                marker.position = addressLoc
+                marker.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
+                map.overlays.add(marker)
+                map.controller.animateTo(addressLoc, 15.0, 2500)
+
+                // Tambahkan lokasi ke daftar (LinearLayout)
+                val locationName = "${address.featureName}, ${address.locality}"
+                // addLocationToList(locationName)
+            } else {
+                Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun searchLocationSuggestions(query: String) {
+        val geocoder = Geocoder(this)
+        var addressList: List<Address>? = null
+        try {
+            // Cari lokasi berdasarkan input pengguna
+            addressList = geocoder.getFromLocationName(query, 10) // Maksimum 10 hasil
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+
+        if (addressList != null) {
+            val suggestions = mutableListOf<String>()
+            for (address in addressList) {
+                val addressText = address.featureName + ", " + address.locality + ", " + address.countryName
+                suggestions.add(addressText)
+            }
+
+            val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, suggestions)
+            autoCompleteTextView.setAdapter(adapter)
+            autoCompleteTextView.showDropDown()
+
+            autoCompleteTextView.setOnItemClickListener { parent, view, position, id ->
+                val selectedAddress = addressList[position]
+                val addressLoc = GeoPoint(selectedAddress.latitude, selectedAddress.longitude)
+
+                addMarkerToMap(addressLoc, selectedAddress.featureName)
+            }
+        }
+    }
+
+    private fun addMarkerToMap(geoPoint: GeoPoint, title: String?) {
+        val marker = Marker(map)
+        marker.position = geoPoint
+        marker.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
+        marker.title = title ?: "Selected Location"
+        map.overlays.add(marker)
+
+        map.controller.animateTo(geoPoint, 15.0, 2500)
+        map.invalidate() // Refresh peta
     }
 
     override fun onPause() {
@@ -160,28 +241,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun searchLocation(){
-        val locationSearch = binding.searchAutocomplete
-        var location: String = locationSearch.text.toString().trim()
-        var addressList: List<Address>? = null
+//    private fun addLocationToList(locationName: String) {
+//        val checkBox = CheckBox(this).apply {
+//            text = locationName
+//            setOnCheckedChangeListener { _, isChecked ->
+//                if (isChecked) {
+//                    // Handle when checkbox is checked (optional)
+//                }
+//            }
+//        }
+//        locationListLayout.addView(checkBox)
+//        updateOptimizeButtonState()  // Panggil saat menambahkan
+//    }
 
-        if (location != null) {
-            val geoCoder = Geocoder(this)
-            try {
-                addressList = geoCoder.getFromLocationName(location, 1)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    private fun updateOptimizeButtonState() {
+        val checkBoxCount = locationListLayout.childCount
 
-            val address = addressList!![0]
-            val addressLoc = GeoPoint(address.latitude, address.longitude)
-
-            val addressMarker = Marker(map)
-            addressMarker.position = addressLoc
-            addressMarker.setAnchor(Marker.ANCHOR_BOTTOM, Marker.ANCHOR_CENTER)
-
-            map.overlays.add(addressMarker)
-            map.controller.animateTo(addressLoc, 15.0, 2500)
-        }
+        binding.btnOptimizeRoute.isEnabled = checkBoxCount >= 3
     }
+
 }

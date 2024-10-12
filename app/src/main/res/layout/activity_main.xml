@@ -14,7 +14,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:text="Route Optimization"
-        android:textSize="18sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -24,38 +24,41 @@
         android:id="@+id/search_autocomplete"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="  Enter addresses..."
-        android:padding="12dp"
-        android:layout_marginTop="16dp"
-        android:inputType="text"
-        android:background="@drawable/rounded_edittext"
-        android:drawableStart="@drawable/search"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/routeOptimizationTitle"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"/>
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/rounded_edittext"
+        android:drawableStart="@drawable/search_24px"
+        android:drawablePadding="8dp"
+        android:hint="@string/enter_addresses"
+        android:inputType="text"
+        android:padding="16dp"
+        android:paddingStart="12dp"
+        android:completionThreshold="1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/routeOptimizationTitle" />
 
     <!-- MapView from OSMDroid -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="0dp"
         android:layout_height="300dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintTop_toBottomOf="@id/search_autocomplete"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"/>
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/search_autocomplete" />
 
     <ImageView
         android:id="@+id/mapIcon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="68dp"
+        android:layout_height="64dp"
         android:layout_marginStart="16dp"
-        android:contentDescription="Map Icon"
-        android:padding="8dp"
-        android:src="@drawable/map"
+        android:contentDescription="@string/map_icon"
+        android:padding="12dp"
+        android:src="@drawable/pin_drop_24px"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/mapView" />
 
@@ -73,33 +76,36 @@
 
         <ImageView
             android:id="@+id/editIcon"
-            android:layout_width="wrap_content"
+            android:layout_width="53dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="right"
             android:contentDescription="Edit Icon"
             android:padding="8dp"
-            android:layout_gravity="right"
-            android:src="@drawable/editing" />
+            android:src="@drawable/edit_location_alt_24px" />
 
         <CheckBox
             android:id="@+id/checkbox_mampang_prapatan"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/remove"
-            android:text="Mampang Prapatan, Jakarta Selatan  " />
+            android:drawableEnd="@drawable/cancel_24px"
+            android:drawablePadding="16dp"
+            android:text="@string/contoh1" />
 
         <CheckBox
             android:id="@+id/checkbox_ragunan"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/remove"
-            android:text="Ragunan, Jakarta Selatan  " />
+            android:drawableEnd="@drawable/cancel_24px"
+            android:drawablePadding="16dp"
+            android:text="@string/contoh2" />
 
         <CheckBox
             android:id="@+id/checkbox_lebak_bulus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/remove"
-            android:text="Lebak Bulus, Jakarta Selatan  " />
+            android:drawableEnd="@drawable/cancel_24px"
+            android:drawablePadding="16dp"
+            android:text="@string/contoh3" />
 
     </LinearLayout>
 

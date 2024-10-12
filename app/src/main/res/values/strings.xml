@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">route-optimization</string>
+    <string name="enter_addresses">Enter Addresses...</string>
+    <string name="contoh1">Mampang Prapatan, Jakarta Selatan</string>
+    <string name="contoh2">Ragunan, Jakarta Selatan</string>
+    <string name="contoh3">Lebak Bulus, Jakarta Selatan</string>
+    <string name="map_icon">Map Icon</string>
 </resources>
