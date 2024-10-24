@@ -9,6 +9,7 @@ import android.location.Location
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.CheckBox
@@ -44,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        locationListLayout = findViewById(R.id.linearLayout)
+        locationListLayout = findViewById(R.id.locationListLayout)
         binding.btnOptimizeRoute.isEnabled = false
 
         autoCompleteTextView = findViewById(R.id.search_autocomplete)
@@ -91,6 +92,8 @@ class MainActivity : AppCompatActivity() {
 
         autoCompleteTextView.setOnItemClickListener { parent, _, position, _ ->
             val selectedLocation = parent.getItemAtPosition(position) as String
+            Log.d("coba", "Selected location: $selectedLocation")
+            addLocationToList(selectedLocation)
 
             val geoCoder = Geocoder(this)
             var addressList: List<Address>? = null
@@ -112,8 +115,8 @@ class MainActivity : AppCompatActivity() {
                 map.controller.animateTo(addressLoc, 15.0, 2500)
 
                 // Tambahkan lokasi ke daftar (LinearLayout)
-                val locationName = "${address.featureName}, ${address.locality}"
-                // addLocationToList(locationName)
+                addLocationToList(selectedLocation)
+
             } else {
                 Toast.makeText(this, "Location not found", Toast.LENGTH_SHORT).show()
             }
@@ -241,18 +244,25 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-//    private fun addLocationToList(locationName: String) {
-//        val checkBox = CheckBox(this).apply {
-//            text = locationName
-//            setOnCheckedChangeListener { _, isChecked ->
-//                if (isChecked) {
-//                    // Handle when checkbox is checked (optional)
-//                }
-//            }
-//        }
-//        locationListLayout.addView(checkBox)
-//        updateOptimizeButtonState()  // Panggil saat menambahkan
-//    }
+    private fun addLocationToList(locationName: String) {
+        Log.d("nyari", "addLocationToList called with location: $locationName")
+        val checkBox = CheckBox(this).apply {
+            text = locationName
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) {
+                    // Handle when checkbox is checked (optional)
+                }
+            }
+        }
+        locationListLayout.addView(checkBox)
+        Log.d("coba", "Added checkbox with location: $locationName")
+        Log.d("cobacoba", "Current child count: ${locationListLayout.childCount}")
+        updateOptimizeButtonState()  // Panggil saat menambahkan
+    }
 
     private fun updateOptimizeButtonState() {
         val checkBoxCount = locationListLayout.childCount

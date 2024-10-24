@@ -62,52 +62,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/mapView" />
 
+    <!-- Container for dynamically added CheckBoxes -->
     <LinearLayout
-        android:id="@+id/linearLayout"
+        android:id="@+id/locationListLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:orientation="vertical"
+        android:visibility="visible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/mapView">
-
-        <ImageView
-            android:id="@+id/editIcon"
-            android:layout_width="53dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="right"
-            android:contentDescription="Edit Icon"
-            android:padding="8dp"
-            android:src="@drawable/edit_location_alt_24px" />
-
-        <CheckBox
-            android:id="@+id/checkbox_mampang_prapatan"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/cancel_24px"
-            android:drawablePadding="16dp"
-            android:text="@string/contoh1" />
-
-        <CheckBox
-            android:id="@+id/checkbox_ragunan"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/cancel_24px"
-            android:drawablePadding="16dp"
-            android:text="@string/contoh2" />
-
-        <CheckBox
-            android:id="@+id/checkbox_lebak_bulus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/cancel_24px"
-            android:drawablePadding="16dp"
-            android:text="@string/contoh3" />
-
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@id/mapView" />
 
     <!-- Optimize Route Button -->
     <Button
@@ -123,6 +90,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout" />
+        app:layout_constraintTop_toBottomOf="@+id/locationListLayout" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
