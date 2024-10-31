@@ -19,10 +19,11 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         android:text="Lebak Bulus"
-        android:textSize="24sp"
+        android:textSize="16sp"
         app:layout_constraintStart_toEndOf="@id/cb_location"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/ic_delete" />
+        app:layout_constraintTop_toTopOf="@id/cb_location"
+        app:layout_constraintEnd_toStartOf="@id/ic_delete"
+        app:layout_constraintBottom_toBottomOf="@id/cb_location"/>
 
     <ImageView
         android:id="@+id/ic_delete"

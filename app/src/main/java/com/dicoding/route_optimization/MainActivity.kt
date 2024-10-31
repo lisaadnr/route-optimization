@@ -79,7 +79,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun initLocationClient() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
-        fetchLastLocation()
+        binding.mapIcon.setOnClickListener {
+            fetchLastLocation()
+        }
     }
 
     private fun setupSearchAutoComplete() {
@@ -113,7 +115,7 @@ class MainActivity : AppCompatActivity() {
     private fun getLocationSuggestions(query: String): List<String> {
         val geoCoder = Geocoder(this)
         return try {
-            val addressList = geoCoder.getFromLocationName(query, 10) ?: emptyList()
+            val addressList = geoCoder.getFromLocationName(query, 10) ?: emptyList() // Deprecated
             addressList.map { "${it.featureName}, ${it.locality}, ${it.countryName}" }
         } catch (e: Exception) {
             Log.e("Search", "Error fetching location suggestions", e)
@@ -190,6 +192,30 @@ class MainActivity : AppCompatActivity() {
         map.invalidate()
     }
 
+    private fun addLocationToList(locationName: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val geoPoint = getLocationFromName(locationName)
+            geoPoint?.let {
+                val marker = addMarkerToMap(it, locationName)
+                val location = UserLocation(
+                    id = locations.size + 1,
+                    locName = locationName,
+                    isChecked = true,
+                    latitude = marker.position.latitude,
+                    longitude = marker.position.longitude,
+                    marker = marker
+                )
+                Log.d("addUserLocation", location.toString())
+                locations.add(location)
+
+                withContext(Dispatchers.Main) {
+                    locationAdapter.submitList(locations.toList())
+                    updateOptimizeButtonState()
+                }
+            }
+        }
+    }
+
     private fun addMarkerToMap(geoPoint: GeoPoint, title: String?): Marker {
         val marker = Marker(map).apply {
             position = geoPoint
@@ -205,25 +231,9 @@ class MainActivity : AppCompatActivity() {
         return marker
     }
 
-    private fun addLocationToList(locationName: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val geoPoint = getLocationFromName(locationName)
-            geoPoint?.let {
-                val marker = addMarkerToMap(it, locationName)
-                val location = UserLocation(
-                    id = locations.size + 1,
-                    locName = locationName,
-                    isChecked = true,
-                    marker = marker
-                )
-                locations.add(location)
-
-                withContext(Dispatchers.Main) {
-                    locationAdapter.submitList(locations.toList())
-                    updateOptimizeButtonState()
-                }
-            }
-        }
+    private fun deleteMarkerFromMap(marker: Marker) {
+        map.overlays.remove(marker)
+        map.invalidate()
     }
 
     private fun getLocationFromName(locationName: String): GeoPoint? {
@@ -242,32 +252,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUserLocation(updatedLocation: UserLocation) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val index = locations.indexOfFirst { it.id == updatedLocation.id }
-            if (index != -1) {
-                // Update the checked state of the location
-                locations[index] = updatedLocation
+    /**
+     * BUG: 1. Jika ada dua lokasi sama dengan kondisi isChecked = null, lalu id ke (2) dengan berubah kondisi isChecked true, id ke (1) juga ikut (SOLVE)
+     *      2. Bisakah recyclerview dibuat lazy state? jadi jika salah satu itemnya berubah maka list adapter tidak merubah state semuanya (SOLVE)
+     *      3. Item recyclerview kedip-kedip jika diupdate
+     */
 
+    private fun updateUserLocation(updatedLocation: UserLocation) {
+        Log.d("UpdateUserLocation", "Updated location received: $updatedLocation")
+
+        val index = locations.indexOfFirst { it.id == updatedLocation.id }
+        if (index != -1) {
+            val currentLocation = locations[index]
+            if (currentLocation.isChecked != updatedLocation.isChecked) {
+                locations[index] = updatedLocation
+                locationAdapter.notifyItemChanged(index)
                 if (updatedLocation.isChecked) {
-                    val geoPoint = updatedLocation.locName?.let { getLocationFromName(it) }
-                    geoPoint?.let {
-                        if (locations[index].marker == null) {
+                    val geoPoint = GeoPoint(updatedLocation.latitude, updatedLocation.longitude)
+                    geoPoint.let {
+                        if (currentLocation.marker == null) {
                             val marker = addMarkerToMap(it, updatedLocation.locName)
                             locations[index] = locations[index].copy(marker = marker)
+                            Log.d("locations", locations.toString())
+
                         }
                     }
                 } else {
                     updatedLocation.marker?.let {
-                        map.overlays.remove(it)
+                        deleteMarkerFromMap(it)
                         locations[index] = locations[index].copy(marker = null)
+                        Log.d("locations", locations.toString())
                     }
                 }
 
-                withContext(Dispatchers.Main) {
-                    locationAdapter.submitList(locations.toList())
-                    updateOptimizeButtonState()
-                }
+                locationAdapter.submitList(locations.toList())
             }
         }
     }
@@ -289,7 +307,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
     private fun updateOptimizeButtonState() {
         // Implement your logic for updating the optimize button state here

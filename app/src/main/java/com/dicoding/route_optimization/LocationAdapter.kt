@@ -14,6 +14,7 @@ class LocationAdapter(
 ): ListAdapter<UserLocation, LocationAdapter.LocationViewHolder>(LocationDiffCallback) {
     class LocationViewHolder(private val binding: ItemLocationBinding): RecyclerView.ViewHolder(binding.root) {
         fun bind(userLocation: UserLocation, onLocationCheckedChange: (UserLocation) -> Unit, onDelete: (UserLocation) -> Unit) {
+            binding.cbLocation.setOnCheckedChangeListener(null)
             binding.apply {
                 cbLocation.isChecked = userLocation.isChecked
                 tvLocation.text = userLocation.locName
@@ -44,7 +45,7 @@ class LocationAdapter(
         }
 
         override fun areContentsTheSame(oldItem: UserLocation, newItem: UserLocation): Boolean {
-            return oldItem.id == newItem.id
+            return oldItem.isChecked == newItem.isChecked && oldItem.locName == newItem.locName
         }
 
     }
