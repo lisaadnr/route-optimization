@@ -12,9 +12,12 @@ import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.dicoding.route_optimization.data.result.Result
+import com.dicoding.route_optimization.data.retrofit.LocationData
 import com.dicoding.route_optimization.databinding.ActivityMainBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -29,6 +32,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
@@ -37,6 +41,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationAdapter: LocationAdapter
     private val locations = mutableListOf<UserLocation>()
+
+    private val viewModel: MainViewModel by viewModels {
+        ViewModelFactory.getInstance(this)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +72,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * inisiasi Map dengan center di Jakarta(lat, long)
+     */
     private fun initMap() {
         Configuration.getInstance().userAgentValue = BuildConfig.APPLICATION_ID
         map = binding.mapView.apply {
@@ -77,12 +88,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * inisiasi Lokasi User + (while) mapIcon diklik akan menjalankan fetchLastLocation
+     */
     private fun initLocationClient() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this@MainActivity)
         binding.mapIcon.setOnClickListener {
             fetchLastLocation()
         }
     }
+
+    /**
+     * setup Search bar
+     */
 
     private fun setupSearchAutoComplete() {
         binding.searchAutocomplete.addTextChangedListener(object: TextWatcher {
@@ -166,6 +184,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    /**
+     * fetching Lokasi terkini dari user
+     */
     private fun fetchLastLocation() {
         if (checkPermission(Manifest.permission.ACCESS_FINE_LOCATION) &&
             checkPermission(Manifest.permission.ACCESS_COARSE_LOCATION)) {
@@ -192,6 +213,10 @@ class MainActivity : AppCompatActivity() {
         map.invalidate()
     }
 
+    /**
+     * addLocationToList = menambah data lokasi berupa (class) UserLocation ke array list dengan (parameter) locationName dari Search bar
+     */
+
     private fun addLocationToList(locationName: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val geoPoint = getLocationFromName(locationName)
@@ -209,8 +234,14 @@ class MainActivity : AppCompatActivity() {
                 locations.add(location)
 
                 withContext(Dispatchers.Main) {
+                    val listLatLong: List<LocationData> = locations.toList().map { location ->
+                        LocationData(location.latitude, location.longitude)
+                    }
                     locationAdapter.submitList(locations.toList())
-                    updateOptimizeButtonState()
+                    binding.btnOptimizeRoute.setOnClickListener {
+                        updateOptimizeButtonState(listLatLong)
+                    }
+                    drawPolyline()
                 }
             }
         }
@@ -259,8 +290,6 @@ class MainActivity : AppCompatActivity() {
      */
 
     private fun updateUserLocation(updatedLocation: UserLocation) {
-        Log.d("UpdateUserLocation", "Updated location received: $updatedLocation")
-
         val index = locations.indexOfFirst { it.id == updatedLocation.id }
         if (index != -1) {
             val currentLocation = locations[index]
@@ -273,18 +302,16 @@ class MainActivity : AppCompatActivity() {
                         if (currentLocation.marker == null) {
                             val marker = addMarkerToMap(it, updatedLocation.locName)
                             locations[index] = locations[index].copy(marker = marker)
-                            Log.d("locations", locations.toString())
-
                         }
                     }
                 } else {
                     updatedLocation.marker?.let {
                         deleteMarkerFromMap(it)
                         locations[index] = locations[index].copy(marker = null)
-                        Log.d("locations", locations.toString())
                     }
                 }
 
+                drawPolyline()
                 locationAdapter.submitList(locations.toList())
             }
         }
@@ -303,13 +330,47 @@ class MainActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 locationAdapter.submitList(locations.toList())
-                updateOptimizeButtonState()
+                drawPolyline()
             }
         }
     }
 
-    private fun updateOptimizeButtonState() {
-        // Implement your logic for updating the optimize button state here
+    private fun drawPolyline() {
+        map.overlays.removeIf {
+            it is Polyline
+        }
+
+        if (locations.count { it.isChecked } < 2) return
+
+        val polyline = Polyline(map)
+        val points = locations.map { GeoPoint(it.latitude, it.longitude) }
+        polyline.setPoints(points)
+        map.overlays.add(polyline)
+        map.invalidate()
+    }
+
+    private fun updateOptimizeButtonState(listLoc: List<LocationData>) {
+        viewModel.optimizeRoute(listLoc).observe(this@MainActivity) { optimized ->
+            if (optimized != null) {
+                when (optimized) {
+                    is Result.Loading -> {}
+                    is Result.Success -> {
+                        optimized.data.data.map { optLoc ->
+                            locations.map { location ->
+                                location.latitude = optLoc.latitude.toString().toDoubleOrNull() ?: 0.0
+                                location.longitude = optLoc.longitude.toString().toDoubleOrNull() ?: 0.0
+                            }
+                        }
+
+                        Log.d("HASIL", locations.toString())
+                    }
+                    is Result.Error -> {
+                        Toast.makeText(this, optimized.error, Toast.LENGTH_SHORT).show()
+                        Log.e("HASIL", optimized.error)
+                    }
+                }
+            }
+        }
     }
 
     override fun onPause() {

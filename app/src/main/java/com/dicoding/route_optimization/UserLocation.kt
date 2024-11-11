@@ -5,8 +5,8 @@ import org.osmdroid.views.overlay.Marker
 data class UserLocation(
     val id: Int,
     val locName: String? = null,
-    val latitude: Double,
-    val longitude: Double,
+    var latitude: Double,
+    var longitude: Double,
     var isChecked: Boolean = false,
     var marker: Marker? = null
 )
