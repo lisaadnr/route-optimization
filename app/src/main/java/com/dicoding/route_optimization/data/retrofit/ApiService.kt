@@ -9,7 +9,7 @@ interface ApiService {
     @POST("/optimize")
     fun optimizeRoute(
         @Body requestData: RouteRequest)
-    : Call<RouteResponse>
+            : Call<RouteResponse>
 }
 
 data class RouteRequest(
@@ -20,4 +20,3 @@ data class LocationData(
     val latitude: Double,
     val longitude: Double
 )
-
