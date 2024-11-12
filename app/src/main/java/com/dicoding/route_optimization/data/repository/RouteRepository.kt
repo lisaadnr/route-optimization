@@ -16,7 +16,7 @@ class RouteRepository private constructor(
     fun optimizeRoute(listLoc: List<LocationData>): Flow<Result<RouteResponse>> = flow {
         emit(Result.Loading)
         try {
-            val routeRequest = RouteRequest(locations = listLoc)
+            val routeRequest = RouteRequest(data = listLoc)
             Log.d("TEST", routeRequest.toString())
             val response = apiService.optimizeRoute(routeRequest).awaitResponse()
             if (response.isSuccessful) {

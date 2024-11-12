@@ -13,7 +13,7 @@ interface ApiService {
 }
 
 data class RouteRequest(
-    val locations: List<LocationData>
+    val data: List<LocationData>
 )
 
 data class LocationData(

@@ -56,5 +56,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.3")
     implementation("androidx.activity:activity-ktx:1.3.1")//untuk lifecycleScope
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1")
 
 }

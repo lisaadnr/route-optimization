@@ -355,14 +355,31 @@ class MainActivity : AppCompatActivity() {
                 when (optimized) {
                     is Result.Loading -> {}
                     is Result.Success -> {
-                        optimized.data.data.map { optLoc ->
-                            locations.map { location ->
-                                location.latitude = optLoc.latitude.toString().toDoubleOrNull() ?: 0.0
-                                location.longitude = optLoc.longitude.toString().toDoubleOrNull() ?: 0.0
+                        val optimizedOrder = optimized.data.data.map { it.toInt() }
+                        val reorderedLocations = optimizedOrder.mapNotNull { index ->
+                            listLoc.getOrNull(index)?.let { locationData ->
+                                UserLocation(
+                                    id = index,
+                                    locName = null,
+                                    latitude = locationData.latitude,
+                                    longitude = locationData.longitude,
+                                    isChecked = false,
+                                    marker = null
+                                )
                             }
                         }
 
+                        locations.clear()
+                        locations.addAll(reorderedLocations)
+
+                        locations.forEach { location ->
+                            val geoPoint = GeoPoint(location.latitude, location.longitude)
+                            val marker = addMarkerToMap(geoPoint, location.locName)
+                            location.marker = marker // Simpan marker ke objek UserLocation
+                        }
+
                         Log.d("HASIL", locations.toString())
+                        drawPolyline()
                     }
                     is Result.Error -> {
                         Toast.makeText(this, optimized.error, Toast.LENGTH_SHORT).show()

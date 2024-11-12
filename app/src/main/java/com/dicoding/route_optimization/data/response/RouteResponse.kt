@@ -3,16 +3,15 @@ package com.dicoding.route_optimization.data.response
 import com.google.gson.annotations.SerializedName
 
 data class RouteResponse(
+	@SerializedName("info")
+	val info: Info,
 
-	@field:SerializedName("data")
-	val data: List<DataItem>
+	@SerializedName("data")
+	val data: List<Double>
 )
 
-data class DataItem(
-
-	@field:SerializedName("latitude")
-	val latitude: Any,
-
-	@field:SerializedName("longitude")
-	val longitude: Any
+data class Info(
+	val status: Boolean,
+	val meta: Any?,
+	val message: String
 )
