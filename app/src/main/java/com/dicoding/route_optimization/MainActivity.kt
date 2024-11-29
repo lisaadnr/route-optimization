@@ -16,13 +16,18 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.dicoding.route_optimization.data.response.OSRMResponse
 import com.dicoding.route_optimization.data.result.Result
+import com.dicoding.route_optimization.data.retrofit.ApiConfig
 import com.dicoding.route_optimization.data.retrofit.LocationData
 import com.dicoding.route_optimization.databinding.ActivityMainBinding
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.maps.android.PolyUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
@@ -33,6 +38,9 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +49,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationAdapter: LocationAdapter
     private val locations = mutableListOf<UserLocation>()
+    private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var isOptimized = false
+
 
     private val viewModel: MainViewModel by viewModels {
         ViewModelFactory.getInstance(this)
@@ -234,14 +245,14 @@ class MainActivity : AppCompatActivity() {
                 locations.add(location)
 
                 withContext(Dispatchers.Main) {
-                    val listLatLong: List<LocationData> = locations.toList().map { location ->
-                        LocationData(location.latitude, location.longitude)
-                    }
+                    isOptimized = false
+                    val originalLocations = locations.map { LocationData(it.latitude, it.longitude) }
+                    fetchRouteFromOSRM(originalLocations, 0xFFFF0000.toInt()) // Merah untuk Original Route
+
                     locationAdapter.submitList(locations.toList())
                     binding.btnOptimizeRoute.setOnClickListener {
-                        updateOptimizeButtonState(listLatLong)
+                        updateOptimizeButtonState()
                     }
-                    drawPolyline()
                 }
             }
         }
@@ -311,7 +322,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                drawPolyline()
+                val routeLocations = locations.map { LocationData(it.latitude, it.longitude) }
+                fetchRouteFromOSRM(routeLocations, 0xFFFF0000.toInt())
                 locationAdapter.submitList(locations.toList())
             }
         }
@@ -329,42 +341,85 @@ class MainActivity : AppCompatActivity() {
             }
 
             withContext(Dispatchers.Main) {
+                map.overlays.removeIf { it is Polyline }
+
                 locationAdapter.submitList(locations.toList())
-                drawPolyline()
+
+                locationAdapter.notifyDataSetChanged()
+
+                if (locations.size > 1) {
+                    val routeLocations = locations.map { LocationData(it.latitude, it.longitude) }
+                    val routeColor = if (isOptimized) 0xFF00FF00.toInt() else 0xFFFF0000.toInt()
+                    fetchRouteFromOSRM(routeLocations, routeColor)
+                } else {
+                    map.invalidate()
+                }
             }
         }
     }
 
-    private fun drawPolyline() {
-        map.overlays.removeIf {
-            it is Polyline
+    private fun fetchRouteFromOSRM(locations: List<LocationData>, color: Int) {
+        if (locations.size < 2) return
+
+        val coordinates = locations.joinToString(";") { "${it.longitude},${it.latitude}" }
+
+        ApiConfig.getOSRMApiService().getRoute(coordinates).enqueue(object : Callback<OSRMResponse> {
+            override fun onResponse(call: Call<OSRMResponse>, response: Response<OSRMResponse>) {
+                if (response.isSuccessful) {
+                    val route = response.body()?.routes?.firstOrNull()
+                    if (route != null) {
+                        val geoPoints = decodePolyline(route.geometry)
+
+                        map.overlays.removeIf { it is Polyline }
+                        drawPolylineOnMap(geoPoints, color)
+                    } else {
+                        Log.e("OSRM", "No route found")
+                    }
+                } else {
+                    Log.e("OSRM", "Error: ${response.message()}")
+                }
+            }
+
+            override fun onFailure(call: Call<OSRMResponse>, t: Throwable) {
+                Log.e("OSRM", "Failure: ${t.message}")
+            }
+        })
+    }
+
+    fun decodePolyline(encodedPolyline: String): List<GeoPoint> {
+        val decodedPoints = PolyUtil.decode(encodedPolyline)
+        return decodedPoints.map { GeoPoint(it.latitude, it.longitude) }
+    }
+
+    private fun drawPolylineOnMap(geoPoints: List<GeoPoint>, color: Int) {
+        val polyline = Polyline(map).apply {
+            setPoints(geoPoints)
+            this.color = color
+            this.width = 5f
         }
-
-        if (locations.count { it.isChecked } < 2) return
-
-        val polyline = Polyline(map)
-        val points = locations.map { GeoPoint(it.latitude, it.longitude) }
-        polyline.setPoints(points)
         map.overlays.add(polyline)
         map.invalidate()
     }
 
-    private fun updateOptimizeButtonState(listLoc: List<LocationData>) {
-        viewModel.optimizeRoute(listLoc).observe(this@MainActivity) { optimized ->
+    private fun updateOptimizeButtonState() {
+        val validLocations = locations.map { LocationData(it.latitude, it.longitude) }
+
+        viewModel.optimizeRoute(validLocations).observe(this@MainActivity) { optimized ->
             if (optimized != null) {
                 when (optimized) {
                     is Result.Loading -> {}
                     is Result.Success -> {
+                        isOptimized = true
                         val optimizedOrder = optimized.data.data.map { it.toInt() }
                         val reorderedLocations = optimizedOrder.mapNotNull { index ->
-                            listLoc.getOrNull(index)?.let { locationData ->
+                            locations.getOrNull(index)?.let { locationData ->
                                 UserLocation(
                                     id = index,
-                                    locName = null,
+                                    locName = locationData.locName,
                                     latitude = locationData.latitude,
                                     longitude = locationData.longitude,
                                     isChecked = false,
-                                    marker = null
+                                    marker = locationData.marker
                                 )
                             }
                         }
@@ -372,18 +427,17 @@ class MainActivity : AppCompatActivity() {
                         locations.clear()
                         locations.addAll(reorderedLocations)
 
-                        locations.forEach { location ->
-                            val geoPoint = GeoPoint(location.latitude, location.longitude)
-                            val marker = addMarkerToMap(geoPoint, location.locName)
-                            location.marker = marker // Simpan marker ke objek UserLocation
-                        }
+                        locationAdapter.submitList(locations.toList())
 
-                        Log.d("HASIL", locations.toString())
-                        drawPolyline()
+                        Log.d("OptimizedLocations", reorderedLocations.joinToString { it.locName ?: "Unknown" })
+
+                        val sortedLocations = locations.map { LocationData(it.latitude, it.longitude) }
+                        fetchRouteFromOSRM(sortedLocations, 0xFF00FF00.toInt()) // Hijau untuk Sorted Route
+
+                        Log.d("HASILJUGA", locations.toString())
                     }
                     is Result.Error -> {
                         Toast.makeText(this, optimized.error, Toast.LENGTH_SHORT).show()
-                        Log.e("HASIL", optimized.error)
                     }
                 }
             }
@@ -398,5 +452,10 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         map.onResume()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineScope.cancel()
     }
 }

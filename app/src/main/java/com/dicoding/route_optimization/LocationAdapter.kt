@@ -41,11 +41,11 @@ class LocationAdapter(
 
     object LocationDiffCallback: DiffUtil.ItemCallback<UserLocation>() {
         override fun areItemsTheSame(oldItem: UserLocation, newItem: UserLocation): Boolean {
-            return oldItem == newItem
+            return oldItem.id == newItem.id
         }
 
         override fun areContentsTheSame(oldItem: UserLocation, newItem: UserLocation): Boolean {
-            return oldItem.isChecked == newItem.isChecked && oldItem.locName == newItem.locName
+            return oldItem == newItem
         }
 
     }

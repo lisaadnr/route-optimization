@@ -8,29 +8,37 @@ import java.util.concurrent.TimeUnit
 
 object ApiConfig {
 
-    fun getApiService(): ApiService {
-        // Logger untuk debugging request dan response
+    private const val OPTIMIZATION_BASE_URL = "https://route-optimization.megalogic.id/"
+    private const val OSRM_BASE_URL = "https://router.project-osrm.org/"
+
+    private val client: OkHttpClient by lazy {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        // OkHttpClient dengan interceptor logging
-        val client = OkHttpClient.Builder()
+        OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
+    }
 
-        // Membangun instance Retrofit
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://route-optimization.megalogic.id/")
+    fun getApiService(): ApiService {
+        return Retrofit.Builder()
+            .baseUrl(OPTIMIZATION_BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
-            .client(
-                OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .build())
+            .client(client)
             .build()
+            .create(ApiService::class.java)
+    }
 
-        return retrofit.create(ApiService::class.java)
+    fun getOSRMApiService(): OSRMService {
+        return Retrofit.Builder()
+            .baseUrl(OSRM_BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
+            .build()
+            .create(OSRMService::class.java)
     }
 }
