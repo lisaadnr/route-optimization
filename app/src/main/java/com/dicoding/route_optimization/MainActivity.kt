@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,7 +52,6 @@ class MainActivity : AppCompatActivity() {
     private val locations = mutableListOf<UserLocation>()
     private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var isOptimized = false
-
 
     private val viewModel: MainViewModel by viewModels {
         ViewModelFactory.getInstance(this)
@@ -407,8 +407,9 @@ class MainActivity : AppCompatActivity() {
         viewModel.optimizeRoute(validLocations).observe(this@MainActivity) { optimized ->
             if (optimized != null) {
                 when (optimized) {
-                    is Result.Loading -> {}
+                    is Result.Loading -> {showLoading(true)}
                     is Result.Success -> {
+                        showLoading(false)
                         isOptimized = true
                         val optimizedOrder = optimized.data.data.map { it.toInt() }
                         val reorderedLocations = optimizedOrder.mapNotNull { index ->
@@ -442,6 +443,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        binding.progressbarLogin.visibility = if (isLoading) View.VISIBLE else View.GONE
     }
 
     override fun onPause() {
